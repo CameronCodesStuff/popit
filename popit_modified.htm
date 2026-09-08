@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a0a1e">
+<title>POP IT!</title>
+<style>
+/* ===== RESET ===== */
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+:root {
+  --skin:       #f0c09a;
+  --skin-mid:   #e8a87c;
+  --skin-dark:  #d4885a;
+  --skin-light: #f8d8bc;
+  --bg:         #1a0a1e;
+  --hud-bg:     rgba(20,8,28,0.92);
+  --yellow:     #ffd23f;
+  --orange:     #ff6b35;
+  --red:        #ff2d55;
+  --green:      #06d6a0;
+  --gold:       #ffc107;
+  --purple:     #b44eff;
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { width:100%; height:100%; overflow:hidden; touch-action:manipulation; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: #fff;
+  position: fixed; inset: 0;
+}
+
+/* ===== SCREENS ===== */
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: opacity 0.3s;
+}
+.screen.hidden { opacity:0; pointer-events:none; }
+
+/* ===== START SCREEN ===== */
+#start-screen {
+  background: radial-gradient(ellipse at 50% 30%, #3a1050 0%, #1a0a1e 70%);
+  padding: 20px;
+  padding-top: calc(var(--safe-top) + 20px);
+  padding-bottom: calc(var(--safe-bottom) + 20px);
+  gap: 10px;
+}
+.start-face-wrap {
+  width: 150px; height: 150px;
+  animation: faceBob 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes faceBob {
+  0%,100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-8px) rotate(2deg); }
+}
+.game-title {
+  font-size: clamp(52px,16vw,80px);
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1;
+  background: linear-gradient(135deg,#ffd23f 0%,#ff6b35 50%,#ff2d55 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 4px 12px rgba(255,107,53,.5));
+  flex-shrink: 0;
+}
+.game-tagline {
+  font-size: clamp(13px,3.5vw,17px);
+  color: #f0c09a;
+  text-align: center;
+  opacity: .9;
+  max-width: 280px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.best-score-display {
+  font-size: 15px; color: var(--gold);
+  font-weight: 700; letter-spacing: .5px;
+  flex-shrink: 0;
+}
+.btn-play {
+  width: min(280px,80vw); height: 68px;
+  border-radius: 34px; border: none;
+  background: linear-gradient(135deg,#ff6b35,#ff2d55);
+  color: #fff; font-size: 28px; font-weight: 900;
+  letter-spacing: 2px; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(255,45,85,.5), 0 2px 0 rgba(255,255,255,.15) inset;
+  transition: transform .1s, box-shadow .1s;
+  flex-shrink: 0;
+}
+.btn-play:active { transform: scale(.96) translateY(2px); box-shadow: 0 4px 12px rgba(255,45,85,.4); }
+.btn-icon {
+  width:48px; height:48px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);
+  color:#fff; font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.btn-icon:active { background:rgba(255,255,255,.2); }
+
+/* ===== GAME SCREEN ===== */
+#game-screen { background:transparent; justify-content:flex-start; }
+
+/* HUD */
+.hud {
+  width:100%;
+  padding: 8px 16px 8px;
+  padding-top: calc(var(--safe-top) + 8px);
+  background: var(--hud-bg);
+  backdrop-filter: blur(10px);
+  display: flex; align-items: center; gap: 8px;
+  z-index: 100; flex-shrink: 0;
+}
+.hud-block { display:flex; flex-direction:column; align-items:center; min-width:56px; }
+.hud-label { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,.45); font-weight:600; }
+.hud-value { font-size:22px; font-weight:900; color:#fff; line-height:1; }
+.hud-score { color: var(--yellow); }
+.hud-timer { color: #ff6b6b; }
+.hud-combo { color: var(--green); }
+.hud-spacer { flex:1; }
+.hud-btn {
+  width:36px; height:36px; border-radius:50%; border:none;
+  background:rgba(255,255,255,.12); color:#fff;
+  font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+
+/* Timer bar */
+.timer-bar-wrap { width:100%; height:6px; background:rgba(255,255,255,.1); flex-shrink:0; overflow:hidden; }
+.timer-bar {
+  height:100%;
+  background: linear-gradient(90deg,#ff2d55,#ff6b35,#ffd23f);
+  transition: width .1s linear;
+  border-radius: 0 3px 3px 0;
+}
+
+/* Play area */
+#play-area {
+  flex:1; width:100%;
+  position:relative; overflow:hidden;
+  background: radial-gradient(ellipse at 50% 40%, #2a1040 0%, #1a0a1e 100%);
+  touch-action:manipulation;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* Face SVG container */
+#face-container {
+  position: relative;
+  flex-shrink: 0;
+}
+#face-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 12px 40px rgba(0,0,0,.6));
+}
+
+/* ===== PIMPLES ===== */
+.pimple {
+  position: absolute;
+  border-radius: 50%;
+  cursor: pointer;
+  transform: translate(-50%,-50%) scale(0);
+  animation: pimpleSpawn .3s cubic-bezier(.34,1.56,.64,1) forwards;
+  z-index: 10;
+  touch-action: manipulation;
+  will-change: transform;
+  pointer-events: all;
+}
+@keyframes pimpleSpawn {
+  from { transform: translate(-50%,-50%) scale(0); }
+  to   { transform: translate(-50%,-50%) scale(1); }
+}
+.pimple.dying {
+  animation: pimpleDie .25s ease-in forwards !important;
+}
+@keyframes pimpleDie {
+  from { transform:translate(-50%,-50%) scale(1); opacity:1; }
+  to   { transform:translate(-50%,-50%) scale(0); opacity:0; }
+}
+
+.pimple-normal {
+  background: radial-gradient(circle at 35% 30%, #ffcccc 0%,#dd4444 40%,#991111 75%,#661111 100%);
+  box-shadow: 0 3px 10px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.4),
+              inset 0 -3px 6px rgba(0,0,0,.25), inset 2px 2px 4px rgba(255,255,255,.3);
+}
+.pimple-normal::before {
+  content:''; position:absolute;
+  width:35%; height:25%; top:15%; left:20%;
+  background: radial-gradient(ellipse,rgba(255,255,255,.7),transparent);
+  border-radius:50%;
+}
+.pimple-normal.whitehead {
+  background: radial-gradient(circle at 35% 30%,#ffffff 0%,#ffeeee 30%,#dd6666 65%,#aa2222 100%);
+}
+.pimple-large {
+  background: radial-gradient(circle at 35% 30%,#ffbbcc 0%,#cc2244 40%,#881122 75%,#550011 100%);
+  box-shadow: 0 5px 16px rgba(0,0,0,.4), inset 0 -4px 10px rgba(0,0,0,.3),
+              inset 3px 3px 6px rgba(255,255,255,.25);
+  border: 2px solid rgba(100,0,20,.3);
+}
+.pimple-large::before {
+  content:''; position:absolute;
+  width:38%; height:28%; top:14%; left:18%;
+  background: radial-gradient(ellipse,rgba(255,255,255,.65),transparent);
+  border-radius:50%;
+}
+.pimple-golden {
+  background: radial-gradient(circle at 35% 30%,#fffacc 0%,#ffcc00 40%,#cc8800 75%,#885500 100%);
+  box-shadow: 0 4px 14px rgba(255,180,0,.6), 0 0 20px rgba(255,200,0,.3),
+              inset 0 -3px 8px rgba(0,0,0,.2), inset 2px 2px 5px rgba(255,255,200,.5);
+  border: 2px solid rgba(200,140,0,.4);
+  animation: pimpleSpawn .3s cubic-bezier(.34,1.56,.64,1) forwards, goldenGlow 1.2s ease-in-out infinite alternate;
+}
+@keyframes goldenGlow {
+  from { box-shadow: 0 4px 14px rgba(255,180,0,.5), 0 0 16px rgba(255,200,0,.2), inset 0 -3px 8px rgba(0,0,0,.2), inset 2px 2px 5px rgba(255,255,200,.5); }
+  to   { box-shadow: 0 4px 20px rgba(255,180,0,.8), 0 0 30px rgba(255,220,0,.5), inset 0 -3px 8px rgba(0,0,0,.2), inset 2px 2px 5px rgba(255,255,200,.5); }
+}
+.pimple-golden::before { content:'★'; position:absolute; font-size:40%; top:50%; left:50%; transform:translate(-50%,-50%); color:rgba(255,255,255,.7); }
+.pimple-mega {
+  background: radial-gradient(circle at 35% 30%,#ddbbff 0%,#8822cc 40%,#551199 75%,#330066 100%);
+  box-shadow: 0 6px 20px rgba(120,0,200,.5), 0 0 30px rgba(150,0,255,.3),
+              inset 0 -5px 12px rgba(0,0,0,.35), inset 3px 3px 8px rgba(255,255,255,.2);
+  border: 2px solid rgba(80,0,140,.5);
+  animation: pimpleSpawn .3s cubic-bezier(.34,1.56,.64,1) forwards, megaPulse .8s ease-in-out infinite alternate;
+}
+@keyframes megaPulse {
+  from { box-shadow: 0 6px 20px rgba(120,0,200,.5), 0 0 24px rgba(150,0,255,.25), inset 0 -5px 12px rgba(0,0,0,.35), inset 3px 3px 8px rgba(255,255,255,.2); }
+  to   { box-shadow: 0 8px 28px rgba(120,0,200,.7), 0 0 40px rgba(180,0,255,.5), inset 0 -5px 12px rgba(0,0,0,.35), inset 3px 3px 8px rgba(255,255,255,.2); }
+}
+.pimple-mega::before { content:'💥'; position:absolute; font-size:45%; top:50%; left:50%; transform:translate(-50%,-50%); }
+
+/* ===== PARTICLES ===== */
+.particle {
+  position:absolute; border-radius:50%;
+  pointer-events:none; z-index:30;
+  animation: particleFly var(--dur,.5s) ease-out forwards;
+}
+@keyframes particleFly {
+  from { transform:translate(0,0) scale(1); opacity:1; }
+  to   { transform:translate(var(--dx),var(--dy)) scale(0); opacity:0; }
+}
+
+/* ===== FLOATING SCORE ===== */
+.float-text {
+  position:absolute; pointer-events:none;
+  font-weight:900; font-size:22px; z-index:40;
+  animation: floatUp .9s ease-out forwards;
+  white-space:nowrap;
+  text-shadow: 0 2px 4px rgba(0,0,0,.5);
+}
+@keyframes floatUp {
+  0%   { transform:translate(-50%,0) scale(.8); opacity:1; }
+  30%  { transform:translate(-50%,-20px) scale(1.1); opacity:1; }
+  100% { transform:translate(-50%,-70px) scale(.9); opacity:0; }
+}
+
+/* ===== COMBO DISPLAY ===== */
+.combo-display {
+  position:absolute; top:10px; left:50%;
+  transform:translateX(-50%);
+  z-index:50; text-align:center; pointer-events:none;
+  transition:opacity .3s;
+}
+.combo-display.hidden { opacity:0; }
+.combo-multiplier {
+  font-size:32px; font-weight:900; color:var(--green);
+  text-shadow: 0 0 12px rgba(6,214,160,.6), 0 2px 4px rgba(0,0,0,.5);
+  animation: comboBounce .2s ease-out;
+}
+@keyframes comboBounce { 0%{transform:scale(1.4)} 100%{transform:scale(1)} }
+.combo-label { font-size:11px; color:rgba(255,255,255,.7); letter-spacing:1px; text-transform:uppercase; }
+
+/* ===== MESSAGE TEXT ===== */
+.msg-text {
+  position:absolute; top:35%; left:50%;
+  transform:translate(-50%,-50%);
+  font-size:clamp(18px,5.5vw,26px);
+  font-weight:900; z-index:50; pointer-events:none;
+  text-align:center;
+  text-shadow: 0 3px 8px rgba(0,0,0,.5);
+  animation: msgPop 1.2s ease-out forwards;
+  white-space:nowrap;
+}
+@keyframes msgPop {
+  0%   { transform:translate(-50%,-50%) scale(.5); opacity:0; }
+  20%  { transform:translate(-50%,-50%) scale(1.2); opacity:1; }
+  50%  { transform:translate(-50%,-50%) scale(1); opacity:1; }
+  100% { transform:translate(-50%,-80px) scale(.8); opacity:0; }
+}
+
+/* ===== RIPPLE ===== */
+.ripple {
+  position:absolute; border-radius:50%; pointer-events:none; z-index:25;
+  animation: rippleOut .4s ease-out forwards;
+}
+@keyframes rippleOut {
+  from { transform:translate(-50%,-50%) scale(.5); opacity:.8; }
+  to   { transform:translate(-50%,-50%) scale(3); opacity:0; }
+}
+
+/* ===== COUNTDOWN ===== */
+#countdown-overlay {
+  position:absolute; inset:0;
+  background:rgba(20,8,28,.85);
+  display:flex; align-items:center; justify-content:center;
+  z-index:200; backdrop-filter:blur(4px);
+}
+#countdown-overlay.hidden { display:none; }
+.countdown-num {
+  font-size:120px; font-weight:900;
+  animation: countPop .8s ease-out forwards;
+  background:linear-gradient(135deg,#ffd23f,#ff6b35);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+@keyframes countPop {
+  0%   { transform:scale(2); opacity:0; }
+  30%  { transform:scale(.9); opacity:1; }
+  70%  { transform:scale(1); opacity:1; }
+  100% { transform:scale(.5); opacity:0; }
+}
+
+/* ===== PAUSE ===== */
+#pause-overlay {
+  position:absolute; inset:0;
+  background:rgba(20,8,28,.92);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:20px; z-index:150; backdrop-filter:blur(6px);
+}
+#pause-overlay.hidden { display:none; }
+.pause-title { font-size:48px; font-weight:900; color:var(--yellow); }
+
+/* ===== STREAK ===== */
+.streak-bar-wrap {
+  position:absolute; bottom:calc(var(--safe-bottom) + 8px);
+  left:50%; transform:translateX(-50%);
+  width:min(200px,60vw); z-index:20; pointer-events:none;
+}
+.streak-label { font-size:10px; text-align:center; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+.streak-bar-bg { height:6px; background:rgba(0,0,0,.3); border-radius:3px; overflow:hidden; }
+.streak-bar-fill { height:100%; background:linear-gradient(90deg,#06d6a0,#ffd23f); border-radius:3px; width:0%; transition:width .2s; }
+
+/* ===== GAME OVER ===== */
+#gameover-screen {
+  background: radial-gradient(ellipse at 50% 30%,#3a0a4a 0%,#1a0a1e 70%);
+  padding:24px 20px;
+  padding-bottom:calc(var(--safe-bottom) + 24px);
+  gap:16px;
+}
+.go-title {
+  font-size:clamp(36px,12vw,52px); font-weight:900;
+  background:linear-gradient(135deg,#ff6b35,#ff2d55);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text; text-align:center;
+}
+.go-card {
+  width:min(340px,90vw);
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:20px; padding:20px;
+  display:flex; flex-direction:column; gap:12px;
+}
+.go-row { display:flex; justify-content:space-between; align-items:center; }
+.go-row-label { font-size:13px; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.5px; }
+.go-row-val { font-size:28px; font-weight:900; color:#fff; }
+.go-row-val.highlight { color:var(--yellow); }
+.go-row-val.combo-col { color:var(--green); }
+.go-divider { height:1px; background:rgba(255,255,255,.08); }
+.new-hs {
+  text-align:center; font-size:18px; font-weight:900; color:var(--gold);
+  animation:hsBlink .5s ease-in-out infinite alternate;
+  display:none;
+}
+.new-hs.visible { display:block; }
+@keyframes hsBlink {
+  from { opacity:.7; transform:scale(.97); }
+  to   { opacity:1; transform:scale(1.03); }
+}
+.btn-again {
+  width:min(280px,80vw); height:64px; border-radius:32px; border:none;
+  background:linear-gradient(135deg,#ff6b35,#ff2d55);
+  color:#fff; font-size:24px; font-weight:900; letter-spacing:2px;
+  cursor:pointer; box-shadow:0 8px 24px rgba(255,45,85,.45);
+  transition:transform .1s;
+}
+.btn-again:active { transform:scale(.96); }
+.btn-menu {
+  background:transparent; border:2px solid rgba(255,255,255,.2);
+  border-radius:24px; color:rgba(255,255,255,.6);
+  font-size:15px; font-weight:700; padding:10px 28px; cursor:pointer;
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion:reduce) {
+  .pimple,.pimple-golden,.pimple-mega,.start-face-wrap { animation-duration:.01ms !important; animation-iteration-count:1 !important; }
+  .float-text,.msg-text,.particle { animation-duration:.3ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== START SCREEN ===== -->
+<div id="start-screen" class="screen" role="main" aria-label="POP IT! Start Screen">
+  <div class="start-face-wrap" aria-hidden="true">
+    <!-- Cute start-screen face SVG -->
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" width="150" height="150">
+      <defs>
+        <radialGradient id="sg-face" cx="42%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#f8d8bc"/>
+          <stop offset="55%" stop-color="#f0c09a"/>
+          <stop offset="100%" stop-color="#d4885a"/>
+        </radialGradient>
+        <radialGradient id="sg-cheek" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ff9999" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#ff6666" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="sg-p1" cx="35%" cy="30%" r="60%">
+          <stop offset="0%" stop-color="#ffcccc"/>
+          <stop offset="45%" stop-color="#dd4444"/>
+          <stop offset="100%" stop-color="#881111"/>
+        </radialGradient>
+        <radialGradient id="sg-p2" cx="35%" cy="30%" r="60%">
+          <stop offset="0%" stop-color="#fffacc"/>
+          <stop offset="45%" stop-color="#ffcc00"/>
+          <stop offset="100%" stop-color="#885500"/>
+        </radialGradient>
+        <radialGradient id="sg-p3" cx="35%" cy="30%" r="60%">
+          <stop offset="0%" stop-color="#ddbbff"/>
+          <stop offset="45%" stop-color="#8822cc"/>
+          <stop offset="100%" stop-color="#330066"/>
+        </radialGradient>
+      </defs>
+      <!-- Head -->
+      <ellipse cx="100" cy="105" rx="82" ry="90" fill="url(#sg-face)"/>
+      <!-- Ears -->
+      <ellipse cx="18" cy="105" rx="16" ry="22" fill="#e8a87c"/>
+      <ellipse cx="182" cy="105" rx="16" ry="22" fill="#e8a87c"/>
+      <ellipse cx="18" cy="105" rx="9" ry="14" fill="#d4885a"/>
+      <ellipse cx="182" cy="105" rx="9" ry="14" fill="#d4885a"/>
+      <!-- Hair -->
+      <ellipse cx="100" cy="22" rx="80" ry="26" fill="#3d2008"/>
+      <ellipse cx="38" cy="38" rx="28" ry="20" fill="#3d2008"/>
+      <ellipse cx="162" cy="38" rx="28" ry="20" fill="#3d2008"/>
+      <!-- Cheek blush -->
+      <ellipse cx="50" cy="125" rx="22" ry="14" fill="url(#sg-cheek)"/>
+      <ellipse cx="150" cy="125" rx="22" ry="14" fill="url(#sg-cheek)"/>
+      <!-- Eyes -->
+      <ellipse cx="72" cy="90" rx="12" ry="14" fill="#2d1b0e"/>
+      <ellipse cx="128" cy="90" rx="12" ry="14" fill="#2d1b0e"/>
+      <circle cx="68" cy="85" r="4" fill="white"/>
+      <circle cx="124" cy="85" r="4" fill="white"/>
+      <circle cx="70" cy="86" r="2" fill="white" opacity="0.6"/>
+      <!-- Nose -->
+      <ellipse cx="100" cy="112" rx="8" ry="6" fill="#c8784a" opacity="0.5"/>
+      <circle cx="95" cy="114" r="3" fill="#b06830" opacity="0.4"/>
+      <circle cx="105" cy="114" r="3" fill="#b06830" opacity="0.4"/>
+      <!-- Mouth / smile -->
+      <path d="M 78 138 Q 100 158 122 138" stroke="#2d1b0e" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <!-- Pimple 1 - forehead red -->
+      <circle cx="88" cy="55" r="9" fill="url(#sg-p1)" opacity="0.95">
+        <animate attributeName="r" values="9;10.5;9" dur="1.6s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="85" cy="52" r="3" fill="rgba(255,255,255,0.5)"/>
+      <!-- Pimple 2 - cheek gold -->
+      <circle cx="148" cy="108" r="7" fill="url(#sg-p2)" opacity="0.95">
+        <animate attributeName="r" values="7;8.5;7" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="145" cy="105" r="2.5" fill="rgba(255,255,200,0.6)"/>
+      <!-- Pimple 3 - chin mega -->
+      <circle cx="100" cy="162" r="11" fill="url(#sg-p3)" opacity="0.95">
+        <animate attributeName="r" values="11;13;11" dur="1.2s" begin="0.8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="96" cy="158" r="3.5" fill="rgba(255,255,255,0.4)"/>
+    </svg>
+  </div>
+  <h1 class="game-title">POP IT!</h1>
+  <p class="game-tagline">Tap the pimples on the face. Pop as many as you can!</p>
+  <div class="best-score-display" id="start-best">BEST: 0</div>
+  <button class="btn-play" id="btn-play" aria-label="Play the game">PLAY</button>
+  <button class="btn-icon" id="btn-mute-start" aria-label="Toggle sound" title="Toggle sound" style="margin-top:4px">🔊</button>
+</div>
+
+<!-- ===== GAME SCREEN ===== -->
+<div id="game-screen" class="screen hidden" aria-label="Game play area">
+
+  <!-- HUD -->
+  <div class="hud" role="status" aria-live="polite">
+    <div class="hud-block">
+      <span class="hud-label">Score</span>
+      <span class="hud-value hud-score" id="hud-score">0</span>
+    </div>
+    <div class="hud-spacer"></div>
+    <div class="hud-block">
+      <span class="hud-label">Best</span>
+      <span class="hud-value" id="hud-best" style="font-size:16px;color:var(--gold)">0</span>
+    </div>
+    <div class="hud-spacer"></div>
+    <div class="hud-block">
+      <span class="hud-label">Combo</span>
+      <span class="hud-value hud-combo" id="hud-combo">x1</span>
+    </div>
+    <div class="hud-spacer"></div>
+    <div class="hud-block">
+      <span class="hud-label">Time</span>
+      <span class="hud-value hud-timer" id="hud-timer">30</span>
+    </div>
+    <div class="hud-spacer"></div>
+    <button class="hud-btn" id="btn-pause" aria-label="Pause game">⏸</button>
+    <button class="hud-btn" id="btn-mute-game" aria-label="Toggle sound" style="margin-left:4px">🔊</button>
+  </div>
+
+  <!-- Timer bar -->
+  <div class="timer-bar-wrap" aria-hidden="true">
+    <div class="timer-bar" id="timer-bar" style="width:100%"></div>
+  </div>
+
+  <!-- Play area — contains the face -->
+  <div id="play-area" aria-label="Tap pimples on the face" role="application">
+
+    <!-- The face, sized by JS -->
+    <div id="face-container">
+      <svg id="face-svg" viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="gf" cx="42%" cy="32%" r="65%">
+            <stop offset="0%" stop-color="#f8d8bc"/>
+            <stop offset="55%" stop-color="#f0c09a"/>
+            <stop offset="100%" stop-color="#c8784a"/>
+          </radialGradient>
+          <radialGradient id="gc" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ff9999" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#ff6666" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="gn" cx="50%" cy="40%" r="55%">
+            <stop offset="0%" stop-color="#e89878"/>
+            <stop offset="100%" stop-color="#c07040"/>
+          </radialGradient>
+          <filter id="skinBlur"><feGaussianBlur stdDeviation="1.2"/></filter>
+        </defs>
+
+        <!-- Neck -->
+        <rect x="118" y="305" width="64" height="35" rx="10" fill="#e8a87c"/>
+        <rect x="122" y="305" width="56" height="10" fill="#d4885a"/>
+
+        <!-- Ears -->
+        <ellipse cx="25"  cy="170" rx="22" ry="30" fill="#e8a87c"/>
+        <ellipse cx="275" cy="170" rx="22" ry="30" fill="#e8a87c"/>
+        <ellipse cx="25"  cy="170" rx="13" ry="19" fill="#c8784a"/>
+        <ellipse cx="275" cy="170" rx="13" ry="19" fill="#c8784a"/>
+
+        <!-- Head shape -->
+        <ellipse cx="150" cy="165" rx="122" ry="145" fill="url(#gf)"/>
+
+        <!-- Hair -->
+        <ellipse cx="150" cy="28"  rx="120" ry="42" fill="#2d1505"/>
+        <ellipse cx="52"  cy="55"  rx="48"  ry="38" fill="#2d1505"/>
+        <ellipse cx="248" cy="55"  rx="48"  ry="38" fill="#2d1505"/>
+        <ellipse cx="150" cy="20"  rx="90"  ry="22" fill="#3d2008"/>
+
+        <!-- Eyebrows -->
+        <path d="M 88 95 Q 108 82 130 90" stroke="#2d1505" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 170 90 Q 192 82 212 95" stroke="#2d1505" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+        <!-- Eyes white -->
+        <ellipse cx="108" cy="118" rx="21" ry="18" fill="white"/>
+        <ellipse cx="192" cy="118" rx="21" ry="18" fill="white"/>
+        <!-- Iris -->
+        <circle cx="108" cy="120" r="13" fill="#4a7fbf"/>
+        <circle cx="192" cy="120" r="13" fill="#4a7fbf"/>
+        <!-- Pupil -->
+        <circle cx="110" cy="121" r="8"  fill="#1a0a05"/>
+        <circle cx="194" cy="121" r="8"  fill="#1a0a05"/>
+        <!-- Highlight -->
+        <circle cx="105" cy="115" r="4.5" fill="white" opacity="0.85"/>
+        <circle cx="189" cy="115" r="4.5" fill="white" opacity="0.85"/>
+        <circle cx="114" cy="117" r="2"   fill="white" opacity="0.5"/>
+        <circle cx="198" cy="117" r="2"   fill="white" opacity="0.5"/>
+        <!-- Lower lashes hint -->
+        <ellipse cx="108" cy="134" rx="16" ry="5" fill="#d4885a" opacity="0.25"/>
+        <ellipse cx="192" cy="134" rx="16" ry="5" fill="#d4885a" opacity="0.25"/>
+
+        <!-- Nose -->
+        <ellipse cx="150" cy="182" rx="20" ry="14" fill="url(#gn)" opacity="0.7"/>
+        <circle cx="140" cy="188" r="7"  fill="#b06830" opacity="0.4"/>
+        <circle cx="160" cy="188" r="7"  fill="#b06830" opacity="0.4"/>
+        <ellipse cx="150" cy="176" rx="8" ry="5" fill="#d4885a" opacity="0.3"/>
+
+        <!-- Cheek blush -->
+        <ellipse cx="62"  cy="195" rx="32" ry="20" fill="url(#gc)"/>
+        <ellipse cx="238" cy="195" rx="32" ry="20" fill="url(#gc)"/>
+
+        <!-- Mouth -->
+        <path d="M 110 232 Q 150 268 190 232" stroke="#2d1505" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <!-- Lips hint -->
+        <path d="M 115 235 Q 150 248 185 235" stroke="#c87070" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+
+        <!-- Chin dimple -->
+        <ellipse cx="150" cy="288" rx="10" ry="5" fill="#c8784a" opacity="0.25"/>
+
+        <!-- Skin texture freckles -->
+        <circle cx="80"  cy="160" r="2.5" fill="#c8784a" opacity="0.18"/>
+        <circle cx="90"  cy="175" r="2"   fill="#c8784a" opacity="0.14"/>
+        <circle cx="220" cy="158" r="2.5" fill="#c8784a" opacity="0.18"/>
+        <circle cx="210" cy="174" r="2"   fill="#c8784a" opacity="0.14"/>
+        <circle cx="150" cy="148" r="2"   fill="#c8784a" opacity="0.12"/>
+      </svg>
+    </div>
+
+    <!-- Combo display (above face) -->
+    <div class="combo-display hidden" id="combo-display" style="z-index:60;">
+      <div class="combo-multiplier" id="combo-mult">x2</div>
+      <div class="combo-label">COMBO!</div>
+    </div>
+
+    <!-- Streak meter -->
+    <div class="streak-bar-wrap" aria-hidden="true">
+      <div class="streak-label">STREAK</div>
+      <div class="streak-bar-bg"><div class="streak-bar-fill" id="streak-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- Countdown overlay -->
+  <div id="countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- Pause overlay -->
+  <div id="pause-overlay" class="hidden">
+    <div class="pause-title">PAUSED</div>
+    <button class="btn-play" id="btn-resume" aria-label="Resume game" style="font-size:22px">RESUME</button>
+    <button class="btn-menu" id="btn-pause-menu" aria-label="Return to main menu">Main Menu</button>
+  </div>
+</div>
+
+<!-- ===== GAME OVER SCREEN ===== -->
+<div id="gameover-screen" class="screen hidden" role="main" aria-label="Game Over">
+  <h2 class="go-title">GAME OVER</h2>
+  <div class="new-hs" id="new-hs-banner">🏆 NEW HIGH SCORE! 🏆</div>
+  <div class="go-card">
+    <div class="go-row">
+      <span class="go-row-label">Your Score</span>
+      <span class="go-row-val highlight" id="go-score">0</span>
+    </div>
+    <div class="go-divider"></div>
+    <div class="go-row">
+      <span class="go-row-label">Best Combo</span>
+      <span class="go-row-val combo-col" id="go-combo">x1</span>
+    </div>
+    <div class="go-row">
+      <span class="go-row-label">Pimples Popped</span>
+      <span class="go-row-val" id="go-popped">0</span>
+    </div>
+    <div class="go-divider"></div>
+    <div class="go-row">
+      <span class="go-row-label">High Score</span>
+      <span class="go-row-val" id="go-best" style="color:var(--gold)">0</span>
+    </div>
+  </div>
+  <button class="btn-again" id="btn-again" aria-label="Play again">PLAY AGAIN</button>
+  <button class="btn-menu" id="btn-go-menu" aria-label="Return to main menu">Main Menu</button>
+</div>
+
+<script>
+'use strict';
+// ===================================================
+//  POP IT! — Face Edition
+// ===================================================
+
+const GAME_DURATION = 30;
+const STREAK_MAX    = 10;
+
+let state = {
+  screen: 'menu',
+  score: 0,
+  highScore: parseInt(localStorage.getItem('popitHS') || '0'),
+  combo: 1,
+  bestCombo: 1,
+  poppedCount: 0,
+  streak: 0,
+  timeLeft: GAME_DURATION,
+  muted: false,
+  timerInterval: null,
+  spawnInterval: null,
+  pimpleData: [],
+  nextId: 0,
+};
+
+// ---- DOM ----
+const screens   = { start: document.getElementById('start-screen'), game: document.getElementById('game-screen'), gameover: document.getElementById('gameover-screen') };
+const playArea  = document.getElementById('play-area');
+const faceCont  = document.getElementById('face-container');
+const hudScore  = document.getElementById('hud-score');
+const hudBest   = document.getElementById('hud-best');
+const hudCombo  = document.getElementById('hud-combo');
+const hudTimer  = document.getElementById('hud-timer');
+const timerBar  = document.getElementById('timer-bar');
+const comboDsp  = document.getElementById('combo-display');
+const comboMult = document.getElementById('combo-mult');
+const streakFill= document.getElementById('streak-fill');
+const cdOverlay = document.getElementById('countdown-overlay');
+const cdNum     = document.getElementById('countdown-num');
+const pauseOv   = document.getElementById('pause-overlay');
+
+// ---- FACE ZONES -----------------------------------------------------------
+// Defined in SVG viewBox units (0–300 x, 0–340 y).
+// Each zone is a circle {cx,cy,r} that represents a skin region
+// where pimples can spawn. Excludes eyes, hair, mouth.
+const FACE_ZONES = [
+  // Forehead
+  { cx:150, cy: 68, r:52 },
+  // Left cheek
+  { cx: 72, cy:195, r:40 },
+  // Right cheek
+  { cx:228, cy:195, r:40 },
+  // Nose bridge / between eyes
+  { cx:150, cy:152, r:24 },
+  // Chin area
+  { cx:150, cy:272, r:34 },
+  // Left jaw
+  { cx: 88, cy:245, r:28 },
+  // Right jaw
+  { cx:212, cy:245, r:28 },
+  // Left temple
+  { cx: 60, cy:125, r:22 },
+  // Right temple
+  { cx:240, cy:125, r:22 },
+  // Upper lip / philtrum
+  { cx:150, cy:220, r:18 },
+];
+
+// SVG viewBox dimensions
+const VB_W = 300, VB_H = 340;
+
+// Pick a random point in one of the face zones (SVG coords)
+function randomFacePoint() {
+  const zone = FACE_ZONES[Math.floor(Math.random() * FACE_ZONES.length)];
+  const angle = Math.random() * Math.PI * 2;
+  const dist  = Math.random() * zone.r * 0.85;
+  return {
+    svgX: zone.cx + Math.cos(angle) * dist,
+    svgY: zone.cy + Math.sin(angle) * dist,
+  };
+}
+
+// Convert SVG viewBox coords to pixel coords relative to #face-container
+function svgToPixel(svgX, svgY) {
+  const rect = faceCont.getBoundingClientRect();
+  const scaleX = rect.width  / VB_W;
+  const scaleY = rect.height / VB_H;
+  return {
+    px: svgX * scaleX,
+    py: svgY * scaleY,
+  };
+}
+
+// ---- FACE SIZING ----------------------------------------------------------
+function sizeFace() {
+  const areaRect = playArea.getBoundingClientRect();
+  const aW = areaRect.width;
+  const aH = areaRect.height;
+  const aspect = VB_W / VB_H;       // ~0.882
+  let fW, fH;
+  if (aW / aH < aspect) {
+    fW = aW * 0.96;
+    fH = fW / aspect;
+  } else {
+    fH = aH * 0.96;
+    fW = fH * aspect;
+  }
+  faceCont.style.width  = fW + 'px';
+  faceCont.style.height = fH + 'px';
+}
+window.addEventListener('resize', sizeFace);
+
+// ---- AUDIO ----------------------------------------------------------------
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx && !state.muted) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+}
+function playSound(type) {
+  if (state.muted || !audioCtx) return;
+  try {
+    const ctx = audioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    switch(type) {
+      case 'pop':
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320,now); osc.frequency.exponentialRampToValueAtTime(80,now+.1);
+        gain.gain.setValueAtTime(.35,now); gain.gain.exponentialRampToValueAtTime(.001,now+.12);
+        osc.start(now); osc.stop(now+.12); break;
+      case 'big-pop':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(250,now); osc.frequency.exponentialRampToValueAtTime(60,now+.18);
+        gain.gain.setValueAtTime(.4,now); gain.gain.exponentialRampToValueAtTime(.001,now+.2);
+        osc.start(now); osc.stop(now+.2); break;
+      case 'mega-pop':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180,now); osc.frequency.exponentialRampToValueAtTime(40,now+.3);
+        gain.gain.setValueAtTime(.5,now); gain.gain.exponentialRampToValueAtTime(.001,now+.35);
+        osc.start(now); osc.stop(now+.35);
+        const o2=ctx.createOscillator(), g2=ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.type='sine'; o2.frequency.setValueAtTime(1200,now); o2.frequency.exponentialRampToValueAtTime(200,now+.05);
+        g2.gain.setValueAtTime(.3,now); g2.gain.exponentialRampToValueAtTime(.001,now+.06);
+        o2.start(now); o2.stop(now+.06); break;
+      case 'click':
+        osc.type='sine'; osc.frequency.setValueAtTime(800,now); osc.frequency.exponentialRampToValueAtTime(400,now+.05);
+        gain.gain.setValueAtTime(.2,now); gain.gain.exponentialRampToValueAtTime(.001,now+.06);
+        osc.start(now); osc.stop(now+.06); break;
+      case 'gameover':
+        osc.type='sawtooth'; osc.frequency.setValueAtTime(400,now); osc.frequency.linearRampToValueAtTime(150,now+.4);
+        gain.gain.setValueAtTime(.3,now); gain.gain.exponentialRampToValueAtTime(.001,now+.5);
+        osc.start(now); osc.stop(now+.5); break;
+      case 'combo':
+        osc.type='sine'; osc.frequency.setValueAtTime(600+state.combo*40,now); osc.frequency.exponentialRampToValueAtTime(1200,now+.08);
+        gain.gain.setValueAtTime(.25,now); gain.gain.exponentialRampToValueAtTime(.001,now+.1);
+        osc.start(now); osc.stop(now+.1); break;
+    }
+  } catch(e) {}
+}
+
+function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch(e) {} }
+
+// ---- SCREENS --------------------------------------------------------------
+function showScreen(name) {
+  Object.entries(screens).forEach(([k,el]) => {
+    if (k === name) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+  });
+  state.screen = name === 'game' ? 'playing' : name;
+}
+
+// ---- PIMPLE TYPES ---------------------------------------------------------
+const PIMPLE_TYPES = [
+  { type:'normal', cssClass:'pimple-normal', pts:10,  minSize:22, maxSize:36, life:2800, weight:50 },
+  { type:'large',  cssClass:'pimple-large',  pts:25,  minSize:38, maxSize:52, life:3200, weight:28 },
+  { type:'golden', cssClass:'pimple-golden', pts:50,  minSize:28, maxSize:40, life:1800, weight:42 },
+  { type:'mega',   cssClass:'pimple-mega',   pts:100, minSize:50, maxSize:68, life:3800, weight:8  },
+];
+function pickType() {
+  const tot = PIMPLE_TYPES.reduce((s,t)=>s+t.weight,0);
+  let r = Math.random()*tot;
+  for (const t of PIMPLE_TYPES) { r -= t.weight; if (r<=0) return t; }
+  return PIMPLE_TYPES[0];
+}
+
+// ---- SPAWN ----------------------------------------------------------------
+function spawnPimple() {
+  if (state.screen !== 'playing') return;
+  const typeInfo = pickType();
+  const { svgX, svgY } = randomFacePoint();
+  const { px, py } = svgToPixel(svgX, svgY);
+
+  // Size in pixels: scale by face render size
+  const faceRect = faceCont.getBoundingClientRect();
+  const scale    = faceRect.width / VB_W;
+  const sizeSvg  = typeInfo.minSize + Math.random()*(typeInfo.maxSize - typeInfo.minSize);
+  const sizePx   = sizeSvg * scale;
+
+  // Position relative to face-container, then convert to play-area coords
+  const areaRect = playArea.getBoundingClientRect();
+  const fLeft    = faceRect.left - areaRect.left;
+  const fTop     = faceRect.top  - areaRect.top;
+  const x = fLeft + px;
+  const y = fTop  + py;
+
+  const el = document.createElement('div');
+  el.className = `pimple ${typeInfo.cssClass}`;
+  if (typeInfo.type === 'normal' && Math.random() < 0.3) el.classList.add('whitehead');
+  el.style.cssText = `left:${x}px;top:${y}px;width:${sizePx}px;height:${sizePx}px;`;
+  el.dataset.id = state.nextId++;
+  el.setAttribute('role','button');
+  el.setAttribute('aria-label',`${typeInfo.type} pimple, ${typeInfo.pts} points`);
+
+  const diffMult = Math.max(0.5, 1 - state.score/2000);
+  const life = typeInfo.life * diffMult;
+  const shrinkTimeout = setTimeout(() => removePimple(el.dataset.id, false), life);
+
+  state.pimpleData.push({ el, type:typeInfo, pts:typeInfo.pts, timeout:shrinkTimeout, x, y });
+
+  const onPop = (e) => { e.stopPropagation(); e.preventDefault(); popPimple(el.dataset.id); };
+  el.addEventListener('pointerdown', onPop, { passive:false });
+
+  el.style.transition = `transform ${life*0.85}ms linear`;
+  playArea.appendChild(el);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    el.style.transform = 'translate(-50%,-50%) scale(0.6)';
+  }));
+}
+
+function removePimple(id, popped) {
+  const idx = state.pimpleData.findIndex(d => d.el.dataset.id === String(id));
+  if (idx === -1) return;
+  const data = state.pimpleData[idx];
+  clearTimeout(data.timeout);
+  state.pimpleData.splice(idx, 1);
+  const el = data.el;
+  el.style.transition = 'none';
+  el.classList.add('dying');
+  el.style.pointerEvents = 'none';
+  setTimeout(()=>el.remove(), 300);
+  if (!popped) breakCombo();
+}
+
+function breakCombo() {
+  if (state.combo > 1) { state.combo = 1; updateComboDisplay(); }
+  state.streak = Math.max(0, state.streak - 1);
+  updateStreak();
+}
+
+// ---- POP ------------------------------------------------------------------
+function popPimple(id) {
+  const idx = state.pimpleData.findIndex(d => d.el.dataset.id === String(id));
+  if (idx === -1) return;
+  const data = state.pimpleData[idx];
+  clearTimeout(data.timeout);
+  state.pimpleData.splice(idx, 1);
+
+  const el = data.el;
+  const x  = data.x, y = data.y;
+  const typeInfo = data.type;
+  el.style.pointerEvents = 'none';
+  el.style.transition = 'transform .12s cubic-bezier(.36,.07,.19,.97), opacity .12s';
+  el.style.transform  = 'translate(-50%,-50%) scale(1.6)';
+  el.style.opacity    = '0';
+  setTimeout(()=>el.remove(), 130);
+
+  const pts = typeInfo.pts * state.combo;
+  state.score       += pts;
+  state.poppedCount++;
+  state.combo        = Math.min(state.combo+1, 16);
+  if (state.combo > state.bestCombo) state.bestCombo = state.combo;
+  state.streak       = Math.min(state.streak+1, STREAK_MAX);
+
+  updateHUD();
+  updateComboDisplay();
+  updateStreak();
+  spawnParticles(x, y, typeInfo);
+  spawnFloatText(x, y, pts, typeInfo);
+  spawnRipple(x, y, typeInfo);
+  showMessage(typeInfo);
+
+  ensureAudio();
+  const snd = typeInfo.type==='mega'?'mega-pop':typeInfo.type==='golden'?'big-pop':'pop';
+  playSound(snd);
+  if (state.combo > 2) playSound('combo');
+  if (typeInfo.type==='mega') vibrate([30,10,50]);
+  else if (typeInfo.type==='golden') vibrate([20,5,20]);
+  else vibrate(15);
+  if (typeInfo.type==='mega') shakeScreen();
+}
+
+// ---- EFFECTS --------------------------------------------------------------
+function spawnParticles(x, y, typeInfo) {
+  const count  = typeInfo.type==='mega'?18:typeInfo.type==='golden'?14:typeInfo.type==='large'?10:8;
+  const colors = typeInfo.type==='golden'?['#ffd23f','#ffcc00','#ffe566','#fff5aa','#ffec80']:
+                 typeInfo.type==='mega'  ?['#cc88ff','#aa44ff','#dd99ff','#b44eff','#e0bbff']:
+                 typeInfo.type==='large' ?['#cc2244','#ff4466','#ff8899','#ffbbcc','#aa1133']:
+                                          ['#ffcccc','#ff6666','#dd3333','#ff4444','#fff'];
+  for (let i=0;i<count;i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const angle = (i/count)*Math.PI*2 + Math.random()*.6;
+    const dist  = 28 + Math.random()*55;
+    const size  = 4 + Math.random()*7;
+    const dur   = .28 + Math.random()*.3;
+    p.style.cssText=`left:${x}px;top:${y}px;width:${size}px;height:${size}px;background:${colors[i%colors.length]};--dx:${Math.cos(angle)*dist}px;--dy:${Math.sin(angle)*dist}px;--dur:${dur}s;animation-duration:${dur}s;`;
+    playArea.appendChild(p);
+    setTimeout(()=>p.remove(), dur*1000+60);
+  }
+}
+
+function spawnFloatText(x, y, pts, typeInfo) {
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  const colors = {mega:'#cc88ff',golden:'#ffd700',large:'#ff9944',normal:'#fff'};
+  el.style.cssText=`left:${x}px;top:${y-18}px;color:${colors[typeInfo.type]||'#fff'};`;
+  if (state.combo>2) el.style.fontSize=Math.min(32,20+state.combo*2)+'px';
+  el.textContent = '+'+pts;
+  playArea.appendChild(el);
+  setTimeout(()=>el.remove(), 950);
+}
+
+function spawnRipple(x, y, typeInfo) {
+  const el=document.createElement('div');
+  el.className='ripple';
+  const s = (typeInfo.maxSize||40)*0.7;
+  const c = typeInfo.type==='mega'?'rgba(180,50,255,.6)':typeInfo.type==='golden'?'rgba(255,210,63,.7)':typeInfo.type==='large'?'rgba(204,34,68,.6)':'rgba(255,80,80,.45)';
+  el.style.cssText=`left:${x}px;top:${y}px;width:${s}px;height:${s}px;border:3px solid ${c};background:transparent;`;
+  playArea.appendChild(el);
+  setTimeout(()=>el.remove(), 420);
+}
+
+function shakeScreen() {
+  if (window.matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  const shakes=[[5,-4],[-5,4],[4,5],[-4,-5],[2,-2],[0,0]];
+  let i=0;
+  const go=()=>{
+    if(i>=shakes.length){faceCont.style.transform='';return;}
+    faceCont.style.transform=`translate(${shakes[i][0]}px,${shakes[i][1]}px)`;
+    i++; setTimeout(go,50);
+  };
+  go();
+}
+
+const MESSAGES = {
+  normal:['NICE POP!','CLEAN!','GROSS!','SPLAT!'],
+  large: ['BIG ONE!','JUICY!','SQUEEZED IT!'],
+  golden:['GOLDEN!','RARE FIND!','JACKPOT!'],
+  mega:  ['MEGA POP!','ABSOLUTE CARNAGE!','DISGUSTING! 🤮','INCREDIBLE!'],
+};
+const MSG_COLORS={normal:'#fff',large:'#ff9944',golden:'#ffd700',mega:'#cc88ff'};
+
+function showMessage(typeInfo) {
+  if (typeInfo.type==='normal' && state.combo<4 && Math.random()>.35) return;
+  const pool = MESSAGES[typeInfo.type]||MESSAGES.normal;
+  const text = state.combo>6?'🔥 ON FIRE! 🔥':pool[Math.floor(Math.random()*pool.length)];
+  const el=document.createElement('div');
+  el.className='msg-text';
+  el.style.color=MSG_COLORS[typeInfo.type]||'#fff';
+  el.textContent=text;
+  playArea.appendChild(el);
+  setTimeout(()=>el.remove(),1250);
+}
+
+// ---- HUD ------------------------------------------------------------------
+function updateHUD() {
+  hudScore.textContent = state.score;
+  hudBest.textContent  = Math.max(state.score, state.highScore);
+  hudCombo.textContent = 'x'+state.combo;
+  hudTimer.textContent = state.timeLeft;
+  timerBar.style.width = (state.timeLeft/GAME_DURATION*100)+'%';
+  if (state.timeLeft<=8) timerBar.style.background='#ff2d55';
+}
+
+function updateComboDisplay() {
+  if (state.combo<2) { comboDsp.classList.add('hidden'); return; }
+  comboDsp.classList.remove('hidden');
+  comboMult.textContent=`x${state.combo}`;
+  comboMult.style.animation='none'; void comboMult.offsetWidth;
+  comboMult.style.animation='comboBounce .2s ease-out';
+}
+
+function updateStreak() {
+  streakFill.style.width=(state.streak/STREAK_MAX*100)+'%';
+}
+
+// ---- SPAWNER --------------------------------------------------------------
+function getSpawnInterval() {
+  return Math.max(340, 950 - Math.floor(state.score/80)*30);
+}
+
+function restartSpawner() {
+  if (state.spawnInterval) clearInterval(state.spawnInterval);
+  const iv = getSpawnInterval();
+  state.spawnInterval = setInterval(()=>{
+    if (state.screen!=='playing') return;
+    spawnPimple();
+    if (Math.random()<.12) restartSpawner();
+  }, iv);
+}
+
+// ---- TIMER ----------------------------------------------------------------
+function tick() {
+  if (state.screen!=='playing') return;
+  state.timeLeft--;
+  updateHUD();
+  if (state.timeLeft<=0) endGame();
+}
+
+// ---- GAME FLOW ------------------------------------------------------------
+function resetGameState() {
+  state.pimpleData.forEach(d=>{ clearTimeout(d.timeout); d.el.remove(); });
+  state.pimpleData=[];
+  playArea.querySelectorAll('.float-text,.particle,.ripple,.msg-text').forEach(e=>e.remove());
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval=null; }
+  if (state.spawnInterval) { clearInterval(state.spawnInterval); state.spawnInterval=null; }
+  state.score=0; state.combo=1; state.bestCombo=1;
+  state.poppedCount=0; state.streak=0; state.timeLeft=GAME_DURATION;
+  timerBar.style.background='linear-gradient(90deg,#ff2d55,#ff6b35,#ffd23f)';
+  updateComboDisplay(); updateStreak();
+}
+
+function startCountdown() {
+  showScreen('game');
+  sizeFace();
+  state.screen='countdown';
+  resetGameState();
+  cdOverlay.classList.remove('hidden');
+  pauseOv.classList.add('hidden');
+  updateHUD();
+  let n=3; cdNum.textContent=n; ensureAudio();
+  const step=()=>{
+    cdNum.style.animation='none'; void cdNum.offsetWidth;
+    cdNum.style.animation='countPop .8s ease-out forwards';
+    playSound('click'); vibrate(30);
+    if (n===0) { cdOverlay.classList.add('hidden'); beginPlaying(); return; }
+    cdNum.textContent = n>0?n:'POP!'; n--;
+    setTimeout(step, 800);
+  };
+  setTimeout(step,100);
+}
+
+function beginPlaying() {
+  state.screen='playing';
+  spawnPimple(); spawnPimple();
+  restartSpawner();
+  state.timerInterval=setInterval(tick,1000);
+}
+
+function endGame() {
+  state.screen='gameover';
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval=null; }
+  if (state.spawnInterval) { clearInterval(state.spawnInterval); state.spawnInterval=null; }
+  [...state.pimpleData].forEach(d=>removePimple(d.el.dataset.id,false));
+  playSound('gameover'); vibrate([100,50,100]);
+  const isNewHS = state.score>state.highScore;
+  if (isNewHS) { state.highScore=state.score; localStorage.setItem('popitHS',state.highScore); }
+  document.getElementById('go-score').textContent  = state.score;
+  document.getElementById('go-combo').textContent  = 'x'+state.bestCombo;
+  document.getElementById('go-popped').textContent = state.poppedCount;
+  document.getElementById('go-best').textContent   = state.highScore;
+  document.getElementById('new-hs-banner').classList.toggle('visible',isNewHS);
+  document.getElementById('start-best').textContent='BEST: '+state.highScore;
+  hudBest.textContent=state.highScore;
+  setTimeout(()=>showScreen('gameover'),400);
+}
+
+function pauseGame() {
+  if (state.screen!=='playing') return;
+  state.screen='paused';
+  pauseOv.classList.remove('hidden');
+  if (state.timerInterval){clearInterval(state.timerInterval);state.timerInterval=null;}
+  if (state.spawnInterval){clearInterval(state.spawnInterval);state.spawnInterval=null;}
+  playSound('click');
+}
+
+function resumeGame() {
+  if (state.screen!=='paused') return;
+  state.screen='playing';
+  pauseOv.classList.add('hidden');
+  restartSpawner();
+  state.timerInterval=setInterval(tick,1000);
+  playSound('click');
+}
+
+function toggleMute() {
+  state.muted=!state.muted;
+  const icon=state.muted?'🔇':'🔊';
+  document.getElementById('btn-mute-start').textContent=icon;
+  document.getElementById('btn-mute-game').textContent=icon;
+  if (!state.muted) ensureAudio();
+}
+
+// ---- MISS DETECTION -------------------------------------------------------
+// Tapping bare skin (face SVG bg or play-area bg) breaks combo
+playArea.addEventListener('pointerdown',(e)=>{
+  if (state.screen!=='playing') return;
+  const t=e.target;
+  const isPimple = t.classList.contains('pimple');
+  const isUI = t===comboDsp||t.closest('.streak-bar-wrap')||t.closest('.combo-display');
+  if (!isPimple && !isUI) {
+    breakCombo();
+    const ar=playArea.getBoundingClientRect();
+    const xp=e.clientX-ar.left, yp=e.clientY-ar.top;
+    const rp=document.createElement('div');
+    rp.className='ripple';
+    rp.style.cssText=`left:${xp}px;top:${yp}px;width:40px;height:40px;border:2px solid rgba(255,255,255,.2);`;
+    playArea.appendChild(rp);
+    setTimeout(()=>rp.remove(),420);
+  }
+},{passive:true});
+
+// ---- BUTTONS --------------------------------------------------------------
+document.getElementById('btn-play').addEventListener('pointerdown',()=>{
+  ensureAudio(); playSound('click'); vibrate(20);
+  document.getElementById('start-best').textContent='BEST: '+state.highScore;
+  startCountdown();
+});
+document.getElementById('btn-pause').addEventListener('pointerdown',(e)=>{e.stopPropagation();pauseGame();});
+document.getElementById('btn-resume').addEventListener('pointerdown',(e)=>{e.stopPropagation();resumeGame();});
+document.getElementById('btn-pause-menu').addEventListener('pointerdown',(e)=>{
+  e.stopPropagation();
+  if(state.timerInterval)clearInterval(state.timerInterval);
+  if(state.spawnInterval)clearInterval(state.spawnInterval);
+  state.pimpleData.forEach(d=>{clearTimeout(d.timeout);d.el.remove();});
+  state.pimpleData=[];
+  playArea.querySelectorAll('.float-text,.particle,.ripple,.msg-text').forEach(el=>el.remove());
+  pauseOv.classList.add('hidden');
+  playSound('click');
+  showScreen('start');
+  document.getElementById('start-best').textContent='BEST: '+state.highScore;
+});
+document.getElementById('btn-again').addEventListener('pointerdown',()=>{ playSound('click'); vibrate(20); startCountdown(); });
+document.getElementById('btn-go-menu').addEventListener('pointerdown',()=>{ playSound('click'); showScreen('start'); document.getElementById('start-best').textContent='BEST: '+state.highScore; });
+document.getElementById('btn-mute-start').addEventListener('pointerdown',()=>toggleMute());
+document.getElementById('btn-mute-game').addEventListener('pointerdown',(e)=>{ e.stopPropagation(); toggleMute(); });
+
+// ---- INIT -----------------------------------------------------------------
+document.getElementById('start-best').textContent='BEST: '+state.highScore;
+hudBest.textContent=state.highScore;
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('dblclick',e=>e.preventDefault());
+</script>
+</body>
+</html>
